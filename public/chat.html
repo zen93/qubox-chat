@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+    <head><title>Chat Application</title></head>
+    <script src="https://cdn.socket.io/4.4.0/socket.io.min.js" integrity="sha384-1fOn6VtTq3PWwfsOrk45LnYcGosJwzMHv+Xh/Jx5303FVOXzEnw0EpLv30mtjmlj" crossorigin="anonymous"></script>
+    <script>
+        var socket = io();
+
+        async function fetchUsers() {
+            const messageDiv = document.getElementById('message');
+            try {
+                const usersUrl = 'http://localhost:3000/allUsers';
+                let response = await fetch(usersUrl);
+                let usersData = await response.json();
+                
+                if (!usersData.success) throw new Error(usersData.message);
+
+                return usersData.usernames;
+            } catch (err) {
+                throw err;
+            }
+        }
+
+        async function init() {
+            const messageDiv = document.getElementById('errorMessage');
+            const selectUsers = document.getElementById('selectUsers');
+            try {
+                const username = localStorage.getItem('username');
+                
+                let usernameHeading = document.getElementById('username');
+                usernameHeading.innerHTML = `Hello, ${username}`;
+
+                let usernames = await fetchUsers();
+                usernames = usernames.filter(user => user.toLowerCase().trim() !== username.toLowerCase().trim());
+                
+                if (usernames.length === 0) throw new Error('No one else to chat with');
+                
+                for (let user of usernames) {
+                    selectUsers.options[selectUsers.options.length] = new Option(user, user);
+                }             
+            } catch (err) {
+                messageDiv.innerHTML = err.message;
+            }
+        }
+
+        function sendMessage() {
+            const to = document.getElementById('selectUsers').value;
+            const from = localStorage.getItem('username');
+            
+            const message = document.getElementById('chatMessage').value;
+            document.getElementById('chatMessage').value = '';
+            
+            const data = { to, from, message };
+            socket.emit('clientMessage', data);
+            
+            const chatBox = document.getElementById('chatBox');
+            chatBox.innerHTML += 'You: ' + message + '<br />'; 
+            
+        }
+
+        window.onload = (event) => {
+            init();
+            
+            const username = localStorage.getItem('username');
+
+            if (username) {
+                socket.emit('joinroom', { username });
+            }
+
+            socket.on('message', data => {
+                
+                const chatBox = document.getElementById('chatBox');
+                const user = document.getElementById('selectUsers').value;
+                
+                if (!user) return;
+                
+                if (user === data.from && username === data.to) {
+                    chatBox.innerHTML += data.from + ': ' + data.message + '<br />';
+                }
+            });
+        }
+    </script>
+    <body>
+        <h1 id="username"></h1> 
+        <br />
+        <select name="selectUsers" id="selectUsers">
+        </select>
+        <br />
+        <div id="errorMessage"></div>
+        <div id="chatBox"></div>
+        <input type="text" id="chatMessage" />
+        <button type="button" id="sendMessage" onclick="sendMessage()">Send!</button>
+    </body>
+</html>

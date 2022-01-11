@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+    <head><title>Chat Application</title></head>
+    <script src="https://cdn.socket.io/4.4.0/socket.io.min.js" integrity="sha384-1fOn6VtTq3PWwfsOrk45LnYcGosJwzMHv+Xh/Jx5303FVOXzEnw0EpLv30mtjmlj" crossorigin="anonymous"></script>
+    <script>        
+        async function joinChat(event) {
+            event.preventDefault();
+
+            const messageDiv = document.getElementById('message');
+            messageDiv.innerHTML = '';
+
+            const username = document.getElementById('username').value.trim();
+            const joinUrl = 'http://localhost:3000/join';
+            try {
+                const requestData = {
+                    username,
+                };
+                const joinResponse = await fetch(joinUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData),
+                });
+
+                let response = await joinResponse.json()
+                if (response.success !== true) {
+                    messageDiv.innerHTML = `There was an error creating username ${username}. Try another username`;
+                    return;
+                }
+                
+                messageDiv.innerHTML = `Successfully created username ${username}.`;
+                localStorage.setItem('username', username);
+
+                const REDIRECT_WAIT_TIME = 3000;                
+                setTimeout(() => {
+                    window.location.href = '/chat.html';
+                }, REDIRECT_WAIT_TIME);
+            } catch (err) {
+                messageDiv.innerHTML = err.message;
+            }
+        }
+        
+
+        window.onload = (event) => {
+            const usernameForm = document.getElementById('usernameForm');
+            usernameForm.addEventListener('submit', joinChat);
+        }
+    </script>
+    <body>
+        <h1>Chat Application</h1>
+        <form id="usernameForm">
+            <label for="username">Enter username:</label>
+            <input type="text" name="username" id="username" />
+            <button type="submit">Register</button>
+        </form>
+        <div id="message"></div>
+    </body>
+</html>
